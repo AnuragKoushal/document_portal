@@ -1,6 +1,6 @@
 # Document Analysis, Chat & Comparison Portal
 
-**Module 2 – GenAI LLMOPS**
+**GenAI LLMOPS**
 
 A comprehensive portal for advanced document analysis, comparison, and interactive chat using GenAI and LLMOps principles.
 
