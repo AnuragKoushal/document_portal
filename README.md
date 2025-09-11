@@ -1,6 +1,4 @@
-# Document Analysis, Chat & Comparison Portal
-
-**GenAI LLMOPS**
+# Document Analysis, Chat & Comparison Portal- GenAI LLMOPS
 
 A comprehensive portal for advanced document analysis, comparison, and interactive chat using GenAI and LLMOps principles.
 
@@ -13,6 +11,8 @@ A comprehensive portal for advanced document analysis, comparison, and interacti
 - [Architecture & Implementation](#architecture--implementation)  
 - [Workflow](#workflow)  
 - [Performance & Optimization](#performance--optimization)  
+- [Project Setup Guide](#project-setup-guide)  
+- [Minimum Requirements](#minimum-requirements)  
 - [Installation](#installation)  
 - [Usage](#usage)  
 - [Screenshots](#screenshots)  
@@ -86,14 +86,40 @@ It is designed with performance and scalability in mind, integrating advanced op
 
 ---
 
-## Installation
+## Project Setup Guide
+
+### Create Project Folder and Environment Setup
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/document-analysis-portal.git
+# Create a new project folder
+mkdir <project_folder_name>
 
-# Navigate into the project directory
-cd document-analysis-portal
+# Move into the project folder
+cd <project_folder_name>
 
-# Install dependencies
+# Open the folder in VS Code
+code .
+
+# Create a new Conda environment with Python 3.10
+conda create -p <env_name> python=3.10 -y
+
+# Activate the environment (use full path to the environment)
+conda activate <path_of_the_env>
+
+# Install dependencies from requirements.txt
 pip install -r requirements.txt
+
+# Initialize Git
+git init
+
+# Stage all files
+git add .
+
+# Commit changes
+git commit -m "<write your commit message>"
+
+# Push to remote (after adding remote origin)
+git push
+
+# Cloning the repository
+git clone https://github.com/sunnysavita10/document_portal.git
