@@ -1,6 +1,11 @@
+numpy
 langchain
 python-dotenv
 ipykernel
 langchain-groq 
 langchain_google_genai
+langchain_community
+pypdf
+
+faiss-cpu
 -e .
