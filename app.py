@@ -1,60 +1,138 @@
 import streamlit as st
+import requests
+import json
 
-st.set_page_config(page_title="Startup Analyst Demo", layout="centered")
-st.title("AI Analyst for Startup Evaluation")
+API_BASE = ""  # Set your FastAPI backend URL here
 
-st.markdown(
-    "Upload a founder document or public data to receive an actionable investor summary."
-)
+st.set_page_config(page_title="Document Portal", layout="wide")
 
-uploaded_file = st.file_uploader(
-    "Upload a pitch deck, transcript, update, or email",
-    type=["pdf", "txt", "docx"]
-)
+st.title("📚 Document Portal")
 
-doc_type = st.selectbox(
-    "Select document type:",
-    ["Pitch Deck", "Call Transcript", "Founder Update", "Investor Email"]
-)
+# Create tabs instead of manual JS switching
+tabs = st.tabs(["🔎 Document Analysis", "🆚 Document Compare", "💬 Doc Chat"])
 
-results = {
-    "Pitch Deck": {
-        "summary": "Startup leverages AI-driven analytics for B2B workflow automation. Leadership includes industry veterans.",
-        "benchmarks": "ARR: $130K (sector median: $120K). Retention rate: 88%.",
-        "risk": "Recent team churn noted. Revenue projections realistic.",
-        "recommendation": "Advise deeper technical diligence and customer call."
-    },
-    "Call Transcript": {
-        "summary": "Founders communicate strong technical roadmap and go-to-market. Robust competitor awareness.",
-        "benchmarks": "TAM: $1.4B (consistent with sector). Hiring pace is aggressive, meets startup peer standards.",
-        "risk": "Customer engagement metrics are limited. Current pipeline validation needed.",
-        "recommendation": "Monitor for pipeline growth and product fit in next update."
-    },
-    "Founder Update": {
-        "summary": "Product milestone reached. First enterprise customer signed. Pipeline expanding.",
-        "benchmarks": "Lead-to-close ratio: 28% (sector: 25-32%). Monthly cash burn: $22K (under industry norm).",
-        "risk": "Relying heavily on one key client. Revenue targets may be optimistic.",
-        "recommendation": "Request client diversification plan for risk mitigation."
-    },
-    "Investor Email": {
-        "summary": "Bridge round sought to extend runway; reference to new partnership signed.",
-        "benchmarks": "Runway: 14 months (healthy if new round closes).",
-        "risk": "Key partnership not verified. Revenue lagging prior projections.",
-        "recommendation": "Request proof of partnership and updated forecast before term sheet."
-    }
-}
+# ================= ANALYSIS =================
+with tabs[0]:
+    st.subheader("Analyze a Document")
+    st.caption("Upload a PDF and get structured analysis.")
 
-if uploaded_file is not None:
-    st.success(f"{uploaded_file.name} uploaded successfully.")
-    result = results[doc_type]
-    st.subheader("Investor-Ready AI Analyst Note")
-    st.markdown(f"**Executive Summary:** {result['summary']}")
-    st.markdown(f"**Benchmarks:** {result['benchmarks']}")
-    st.markdown(f"**Risk Flags:** {result['risk']}")
-    st.markdown(f"**Recommendation:** {result['recommendation']}")
-    st.info("This is a demo. Actual AI-powered analysis would use Vertex AI or Gemini integration.")
-else:
-    st.info("Please upload a document and select document type to view analysis.")
+    file = st.file_uploader("Upload PDF", type=["pdf"], key="analysis_file")
+    if st.button("Run Analysis", key="analyze_btn"):
+        if file is None:
+            st.warning("Please upload a PDF.")
+        else:
+            with st.spinner("Running analysis…"):
+                try:
+                    files = {"file": file.getvalue()}
+                    res = requests.post(f"{API_BASE}/analyze", files={"file": file})
+                    if res.status_code == 200:
+                        st.json(res.json())
+                    else:
+                        st.error(f"Error: {res.text}")
+                except Exception as e:
+                    st.error(f"Request failed: {e}")
 
+# ================= COMPARE =================
+with tabs[1]:
+    st.subheader("Compare Two Documents")
+    st.caption("Upload a reference PDF and an actual PDF to see page-wise differences.")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        ref_file = st.file_uploader("Reference PDF", type=["pdf"], key="ref_file")
+    with col2:
+        act_file = st.file_uploader("Actual PDF", type=["pdf"], key="act_file")
+
+    if st.button("Compare", key="compare_btn"):
+        if not ref_file or not act_file:
+            st.warning("Please upload both PDFs.")
+        else:
+            with st.spinner("Comparing…"):
+                try:
+                    files = {
+                        "reference": ref_file,
+                        "actual": act_file,
+                    }
+                    res = requests.post(f"{API_BASE}/compare", files=files)
+                    if res.status_code == 200:
+                        data = res.json().get("rows", [])
+                        if data:
+                            st.table(data)
+                        else:
+                            st.info("No differences found.")
+                    else:
+                        st.error(f"Error: {res.text}")
+                except Exception as e:
+                    st.error(f"Request failed: {e}")
+
+# ================= CHAT =================
+with tabs[2]:
+    st.subheader("Chat with your Documents")
+    st.caption("Upload PDF/DOCX/TXT; we’ll index to FAISS and enable RAG chat.")
+
+    chat_files = st.file_uploader("Upload files", type=["pdf", "docx", "txt"], accept_multiple_files=True, key="chat_files")
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        session_id = st.text_input("Session ID (optional)")
+    with col2:
+        chunk_size = st.number_input("Chunk size", value=1000, min_value=200, step=100)
+    with col3:
+        chunk_overlap = st.number_input("Chunk overlap", value=200, min_value=0, step=50)
+
+    col4, col5 = st.columns(2)
+    with col4:
+        k = st.number_input("Top-K", value=5, min_value=1, max_value=20)
+    with col5:
+        use_session = st.checkbox("Use session-based FAISS", value=True)
+
+    if st.button("Build / Update Index", key="build_index"):
+        if not chat_files:
+            st.warning("Please upload at least one file.")
+        else:
+            with st.spinner("Building index…"):
+                try:
+                    files = [("files", f) for f in chat_files]
+                    data = {
+                        "session_id": session_id or "",
+                        "use_session_dirs": str(use_session).lower(),
+                        "chunk_size": str(chunk_size),
+                        "chunk_overlap": str(chunk_overlap),
+                        "k": str(k),
+                    }
+                    res = requests.post(f"{API_BASE}/chat/index", files=files, data=data)
+                    if res.status_code == 200:
+                        st.success(res.json())
+                    else:
+                        st.error(f"Error: {res.text}")
+                except Exception as e:
+                    st.error(f"Indexing failed: {e}")
+
+    st.divider()
+
+    question = st.text_input("Your Question", placeholder="Ask a question about your documents…")
+    if st.button("Send", key="ask_btn"):
+        if not question.strip():
+            st.warning("Please enter a question.")
+        else:
+            with st.spinner("Thinking…"):
+                try:
+                    data = {
+                        "question": question,
+                        "use_session_dirs": str(use_session).lower(),
+                        "k": str(k),
+                    }
+                    if use_session and session_id:
+                        data["session_id"] = session_id
+                    res = requests.post(f"{API_BASE}/chat/query", data=data)
+                    if res.status_code == 200:
+                        st.markdown("### Answer")
+                        st.write(res.json().get("answer", "No answer."))
+                    else:
+                        st.error(f"Error: {res.text}")
+                except Exception as e:
+                    st.error(f"Query failed: {e}")
+
+# Footer
 st.markdown("---")
-st.caption("Hackathon Demo – AI Startup Analyst, Streamlit.")
+st.caption("© Document Portal • Streamlit UI (hooked to FastAPI backend)")
